@@ -1,0 +1,299 @@
+# Figure Naming Guide - FINDEC-RS
+
+## Quick Reference
+
+### Naming Pattern
+```
+[figure_type]_[component]_[optional_version].png
+```
+
+---
+
+## 3 Required Figures for Your Proposal
+
+### Figure 1: System Architecture
+```
+Filename: system_architecture.png
+Filename: system_architecture_v1.png  (if versioning)
+
+Location in Doc:
+  Section 1 → Project Proposal → Proposed Solution → System Architecture
+  
+LaTeX Reference:
+  \includegraphics[width=0.95\textwidth]{figures/system_architecture.png}
+  \label{fig:system_architecture}
+
+What to Draw:
+  ┌─────────────────────────────────────────────┐
+  │          INPUT LAYER                        │
+  │  User Activities | Market Data | Sentiment  │
+  └────────────────────┬────────────────────────┘
+                       │
+  ┌────────────────────▼────────────────────────┐
+  │       MULTI-AGENT LAYER (Parallel)          │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+  │  │   Bias   │  │  Intent  │  │Knowledge │  │
+  │  │ Detector │  │ Modeler  │  │   Graph  │  │
+  │  └──────────┘  └──────────┘  └──────────┘  │
+  └────────────────────┬────────────────────────┘
+                       │
+  ┌────────────────────▼────────────────────────┐
+  │      GNN INFERENCE LAYER                    │
+  │  Encoding → Bias Correction → Ranking      │
+  └────────────────────┬────────────────────────┘
+                       │
+  ┌────────────────────▼────────────────────────┐
+  │         OUTPUT LAYER                        │
+  │  Recommendations | Explanations | Reports   │
+  └─────────────────────────────────────────────┘
+```
+
+---
+
+### Figure 2: Methodology Pipeline
+```
+Filename: methodology_pipeline.png
+Alternative: methodology_flow_v1.png
+
+Location in Doc:
+  Section 1 → Project Proposal → Proposed Solution → Methodology
+  
+LaTeX Reference:
+  \includegraphics[width=0.95\textwidth]{figures/methodology_pipeline.png}
+  \label{fig:methodology_pipeline}
+
+What to Draw:
+  User Data
+     │
+     ▼
+  ┌────────────────────────────────────────────────┐
+  │  STAGE 1: DATA COLLECTION & PREPROCESSING      │
+  │  • Collect interactions, market data, sentiment│
+  │  • Clean & normalize features                  │
+  └──────────────┬─────────────────────────────────┘
+                 │
+  ┌──────────────▼─────────────────────────────────┐
+  │  STAGE 2: MULTI-AGENT PROFILING (Parallel)    │
+  │  ┌──────────────┐  ┌──────────────┐            │
+  │  │Bias Detection│  │Intent Modeling│           │
+  │  └──────────────┘  └──────────────┘            │
+  │  ┌──────────────────────────┐                  │
+  │  │KG Construction & Updates  │                  │
+  │  └──────────────────────────┘                  │
+  └──────────────┬─────────────────────────────────┘
+                 │
+  ┌──────────────▼─────────────────────────────────┐
+  │  STAGE 3: GNN-BASED INFERENCE                  │
+  │  • GraphSAGE/GAT encoding                      │
+  │  • Bias-correction weighting                   │
+  └──────────────┬─────────────────────────────────┘
+                 │
+  ┌──────────────▼─────────────────────────────────┐
+  │  STAGE 4: RANKING & SCORING                    │
+  │  • Asset ranking with bias correction          │
+  │  • Confidence scoring                          │
+  └──────────────┬─────────────────────────────────┘
+                 │
+  ┌──────────────▼─────────────────────────────────┐
+  │  STAGE 5: OUTPUT GENERATION                    │
+  │  • NLG Explanations                            │
+  │  • Bias alerts & reports                       │
+  └──────────────┬─────────────────────────────────┘
+                 │
+                 ▼
+            Recommendations
+```
+
+---
+
+### Figure 3: Data Flow Diagram
+```
+Filename: data_flow_diagram.png
+Alternative: data_flow_v1.png
+
+Location in Doc:
+  Section 1 → Project Proposal → Proposed Solution → Data Flow Diagram
+  
+LaTeX Reference:
+  \includegraphics[width=0.95\textwidth]{figures/data_flow_diagram.png}
+  \label{fig:data_flow}
+
+What to Draw:
+  
+  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+  │ Behavioral   │    │  Market      │    │  Sentiment   │    │User Explicit │
+  │ Interaction  │    │  Data        │    │  Feeds       │    │Preferences   │
+  │ Logs         │    │(yfinance)    │    │(NewsAPI)     │    │(Onboarding)  │
+  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+         │                   │                    │                   │
+         └───────────────────┼────────────────────┼───────────────────┘
+                             │
+                    ┌────────▼──────────┐
+                    │  Data Pipeline    │
+                    │  (FastAPI)        │
+                    └────────┬──────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+    ┌────▼─────┐       ┌─────▼─────┐      ┌─────▼─────┐
+    │Bias       │       │Intent     │      │Knowledge  │
+    │Detector   │       │Modeler    │      │Generator  │
+    │(Random    │       │(Neural    │      │(GraphDB)  │
+    │Forest)    │       │Net)       │      │           │
+    └────┬─────┘       └─────┬─────┘      └─────┬─────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+                    ┌────────▼──────────┐
+                    │  Knowledge Graph  │
+                    │  (Neo4j)          │
+                    └────────┬──────────┘
+                             │
+                    ┌────────▼──────────┐
+                    │  GNN Inference    │
+                    │(PyTorch Geom)     │
+                    └────────┬──────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+    ┌────▼──────────┐   ┌────▼──────────┐  ┌────▼──────────┐
+    │Bias Scores    │   │Intent Align   │  │Recommendations│
+    │& Alerts       │   │Scores         │  │with Badges    │
+    └────┬──────────┘   └────┬──────────┘  └────┬──────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+                    ┌────────▼──────────┐
+                    │   UI Dashboard    │
+                    │   (Next.js 14)    │
+                    └───────────────────┘
+```
+
+---
+
+## File Naming Rules
+
+### DO ✅
+- `system_architecture.png` - Clear, descriptive
+- `methodology_pipeline.png` - Matches LaTeX label
+- `data_flow_diagram.png` - Follows naming pattern
+- `knowledge_graph_schema_v2.png` - Includes version info
+- `bias_detector_flowchart.png` - Component + type
+
+### DON'T ❌
+- `diagram.png` - Too vague
+- `img1.png` - Not descriptive
+- `figure_slide10.png` - References slide, not content
+- `New Document 1.png` - Auto-generated name
+- `systemArchitecture.png` - Inconsistent (camelCase)
+
+---
+
+## File Organization
+
+```
+c:\Users\mansi\FINDEC-RS\
+├── FINDEC-RS_Proposal.tex
+├── figures/                          ← All images go here
+│   ├── system_architecture.png       (Required)
+│   ├── methodology_pipeline.png      (Required)
+│   ├── data_flow_diagram.png         (Required)
+│   ├── knowledge_graph_schema.png    (Optional)
+│   ├── README.md                     (This guide)
+│   └── INSTRUCTIONS.md               (Detailed instructions)
+├── frontend/
+├── backend/
+└── config/
+```
+
+---
+
+## Export Settings by Tool
+
+### PowerPoint
+1. Select slide with diagram
+2. **File → Export → Change File Type → PNG Portable Network Format**
+3. Choose location: `c:\Users\mansi\FINDEC-RS\figures\`
+4. Enter filename: `system_architecture.png`
+5. When prompted, select **"All Slides" or "Current Slide Only"**
+6. ✅ Result: High-quality PNG
+
+### Draw.io
+1. Create diagram in Draw.io
+2. **File → Export as → PNG**
+3. Settings:
+   - Zoom: 150%
+   - Border Width: 10
+   - Background: White
+   - Transparent background: ☐ Uncheck
+4. Save location: `figures\filename.png`
+5. ✅ Result: Perfect for technical diagrams
+
+### Lucidchart
+1. Design diagram
+2. **File → Download as → PNG**
+3. Select:
+   - Quality: High (300 DPI)
+   - Size: 1600 x 1200 px
+4. Download to `c:\Users\mansi\FINDEC-RS\figures\`
+5. ✅ Result: Professional-grade
+
+---
+
+## Verification Checklist
+
+Before using a figure in LaTeX:
+
+- [ ] File exists in `c:\Users\mansi\FINDEC-RS\figures\` folder
+- [ ] Filename matches LaTeX `\includegraphics` path exactly
+- [ ] Resolution is 300 DPI minimum
+- [ ] File size < 2MB
+- [ ] Image uses black/white/gray colors (for print)
+- [ ] Text and labels are legible
+- [ ] Image has clear white background
+- [ ] No watermarks or logos
+
+---
+
+## Example Complete Process
+
+### Step 1: Design
+```
+Tool: Draw.io
+Creates: System architecture with 3 layers
+```
+
+### Step 2: Export
+```
+File → Export as PNG
+Zoom: 150%
+Save as: system_architecture.png
+Location: c:\Users\mansi\FINDEC-RS\figures\
+```
+
+### Step 3: Reference in LaTeX
+```latex
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/system_architecture.png}
+\caption{FINDEC-RS System Architecture...}
+\label{fig:system_architecture}
+\end{figure}
+```
+
+### Step 4: Compile PDF
+```bash
+cd c:\Users\mansi\FINDEC-RS
+pdflatex FINDEC-RS_Proposal.tex
+# Open FINDEC-RS_Proposal.pdf
+```
+
+---
+
+**Quick Help:**
+- Can't find your figure? Check the path matches exactly
+- Figure looks blurry? Increase DPI to 300+
+- File too big? Compress with TinyPNG or similar
+- Need to edit after export? Export as PNG from original file
+
+---

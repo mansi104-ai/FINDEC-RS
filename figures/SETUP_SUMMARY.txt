@@ -1,0 +1,333 @@
+# ✓ FINDEC-RS Figures Setup Complete
+
+## What Was Added to Your Document
+
+### Updated Sections in `FINDEC-RS_Proposal.tex`
+
+#### 1. **System Architecture** (Line ~378)
+```latex
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/system_architecture.png}
+\caption{FINDEC-RS System Architecture...}
+\label{fig:system_architecture}
+\end{figure}
+```
+✅ **File needed:** `figures/system_architecture.png`
+
+#### 2. **Methodology Pipeline** (Line ~410)
+This uses TikZ (embedded diagram) - no PNG needed initially, but can be created.
+```latex
+\label{fig:methodology_pipeline}
+```
+📌 **Optional file:** `figures/methodology_pipeline.png`
+
+#### 3. **Data Flow Diagram** (Line ~588)
+```latex
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/data_flow_diagram.png}
+\caption{FINDEC-RS Data Flow Diagram...}
+\label{fig:data_flow}
+\end{figure}
+```
+✅ **File needed:** `figures/data_flow_diagram.png`
+
+#### 4. **Knowledge Graph Schema** (Line ~519)
+Uses TikZ - no PNG needed initially.
+```latex
+\label{fig:kg}
+```
+📌 **Optional file:** `figures/knowledge_graph_schema.png`
+
+---
+
+## Directory Structure Created
+
+```
+c:\Users\mansi\FINDEC-RS\
+└── figures/
+    ├── README.md                      (Overall guide)
+    ├── NAMING_GUIDE.txt              (Naming conventions & examples)
+    ├── GENERATE_FIGURES.md           (Python script templates)
+    ├── system_architecture.png       (👈 CREATE THIS)
+    ├── methodology_pipeline.png      (optional)
+    ├── data_flow_diagram.png         (👈 CREATE THIS)
+    └── knowledge_graph_schema.png    (optional)
+```
+
+---
+
+## Required Figures Summary
+
+| Name | Required | Status | Format |
+|------|----------|--------|--------|
+| **system_architecture.png** | ✅ YES | ⏳ TODO | PNG (1600×1200 px) |
+| **data_flow_diagram.png** | ✅ YES | ⏳ TODO | PNG (1600×1000 px) |
+| **methodology_pipeline.png** | ⚠️ Optional | 🔧 TikZ embedded | PNG or TikZ |
+| **knowledge_graph_schema.png** | ⚠️ Optional | 🔧 TikZ embedded | PNG or TikZ |
+
+---
+
+## How to Create the Figures
+
+### Option 1: Use Online Tools (Easiest)
+
+#### For `system_architecture.png`:
+1. Go to https://www.draw.io
+2. Create a new diagram
+3. Draw the system architecture (3 layers):
+   - **Input Layer:** User Interactions, Market Data, Sentiment, Explicit Prefs
+   - **Multi-Agent Layer:** Bias Detector, Intent Modeler, KG Constructor
+   - **Inference Layer:** GNN Encoding → Bias Correction → Ranking
+   - **Output Layer:** Recommendations
+4. **File → Export as → PNG**
+5. Settings: Zoom 150%, Border 10px, White background
+6. Save to: `c:\Users\mansi\FINDEC-RS\figures\system_architecture.png`
+
+#### For `data_flow_diagram.png`:
+1. Go to https://www.draw.io
+2. Create new diagram
+3. Draw data flow:
+   - Left: 4 data sources (Behavioral, Market, Sentiment, User)
+   - Center: Agents/KG/GNN pipeline
+   - Right: Outputs (Recommendations, Explanations, Reports)
+   - Bottom: Dashboard UI
+4. **File → Export as → PNG**
+5. Save to: `c:\Users\mansi\FINDEC-RS\figures\data_flow_diagram.png`
+
+### Option 2: Use PowerPoint (If you have it)
+
+1. Open PowerPoint
+2. Design the diagrams as slides
+3. Right-click slide → **Save as Picture → PNG**
+4. Choose **300 DPI quality**
+5. Save with names: `system_architecture.png`, `data_flow_diagram.png`
+
+### Option 3: Use Python Scripts (Automated)
+
+1. Save the scripts from `figures/GENERATE_FIGURES.md`
+2. Open terminal in `c:\Users\mansi\FINDEC-RS\`
+3. Run:
+```bash
+pip install graphviz
+python generate_all_figures.py
+```
+All 4 figures will auto-generate!
+
+---
+
+## Step-by-Step to Get PDF with Figures
+
+### Final Checklist
+
+- [ ] **Step 1:** Create `system_architecture.png` using Draw.io or PowerPoint
+  - Dimensions: 1600 × 1200 px
+  - Save location: `c:\Users\mansi\FINDEC-RS\figures\`
+
+- [ ] **Step 2:** Create `data_flow_diagram.png`
+  - Dimensions: 1600 × 1000 px
+  - Save location: `c:\Users\mansi\FINDEC-RS\figures\`
+
+- [ ] **Step 3:** Verify files exist
+  ```bash
+  dir c:\Users\mansi\FINDEC-RS\figures\
+  ```
+  Should show: `system_architecture.png` and `data_flow_diagram.png`
+
+- [ ] **Step 4:** Compile PDF
+  ```bash
+  cd c:\Users\mansi\FINDEC-RS
+  pdflatex FINDEC-RS_Proposal.tex
+  ```
+
+- [ ] **Step 5:** Run again for references
+  ```bash
+  pdflatex FINDEC-RS_Proposal.tex
+  ```
+
+- [ ] **Step 6:** Open PDF
+  ```bash
+  start FINDEC-RS_Proposal.pdf
+  ```
+
+---
+
+## Naming Convention Reference
+
+### Pattern
+```
+[type]_[component]_[optional_version].png
+```
+
+### Examples
+```
+✅ Correct Names:
+  - system_architecture.png
+  - methodology_pipeline.png
+  - data_flow_diagram.png
+  - knowledge_graph_schema.png
+  - system_architecture_v2.png
+
+❌ Wrong Names:
+  - diagram.png
+  - figure1.png
+  - systemArchitecture.png  (camelCase)
+  - New Document 1.png
+```
+
+---
+
+## What Each Figure Shows
+
+### 1. **system_architecture.png**
+Shows HOW the system is structured:
+```
+User Input Data
+        ↓
+Bias Detector | Intent Modeler | KG Constructor (parallel)
+        ↓
+GNN Inference + Bias Correction
+        ↓
+Ranking + Explanation Generation
+        ↓
+Recommendations with Alerts
+```
+
+### 2. **data_flow_diagram.png**
+Shows WHERE data comes from and WHERE it goes:
+```
+Input Sources → Processing Agents → Knowledge Graph → GNN → Output UI
+  (4 types)      (3 parallel)      (Central)      (Scoring) (Dashboard)
+```
+
+### 3. **methodology_pipeline.png** (optional - already in TikZ)
+Shows STAGES of processing:
+```
+Stage 1: Collect & Preprocess
+    ↓
+Stage 2: Multi-Agent Profiling
+    ↓
+Stage 3: GNN Encoding
+    ↓
+Stage 4: Ranking & Scoring
+    ↓
+Stage 5: Explanation Generation
+```
+
+### 4. **knowledge_graph_schema.png** (optional - already in TikZ)
+Shows KG node types and relationships:
+```
+User ←→ Bias Type
+ ↓     ↓
+ Asset ← Intent Vector
+ ↓
+Sector
+```
+
+---
+
+## PDF Compilation Commands
+
+### One-liner (Windows PowerShell):
+```powershell
+cd c:\Users\mansi\FINDEC-RS; pdflatex FINDEC-RS_Proposal.tex; pdflatex FINDEC-RS_Proposal.tex; start FINDEC-RS_Proposal.pdf
+```
+
+### Or step by step:
+```bash
+# Navigate to project
+cd c:\Users\mansi\FINDEC-RS
+
+# First pass (generates content)
+pdflatex FINDEC-RS_Proposal.tex
+
+# Second pass (resolves references and TOC)
+pdflatex FINDEC-RS_Proposal.tex
+
+# Open result
+start FINDEC-RS_Proposal.pdf
+```
+
+---
+
+## Troubleshooting
+
+### Issue: "Package graphicx Error: File 'figures/system_architecture.png' not found"
+
+**Solution:**
+```
+1. Check file exists: c:\Users\mansi\FINDEC-RS\figures\system_architecture.png
+2. Ensure filename matches EXACTLY (case-sensitive)
+3. Try re-running: pdflatex FINDEC-RS_Proposal.tex
+```
+
+### Issue: Figure looks blurry in PDF
+
+**Solution:**
+```
+1. Export at 300 DPI (not 72 DPI)
+2. Image should be at least 1600px wide
+3. Re-export and recompile
+```
+
+### Issue: LaTeX won't find pdflatex
+
+**Solution:** Ensure MikTeX or TeX Live is installed and in PATH
+```bash
+# Check if installed
+pdflatex --version
+
+# If not found, install MikTeX from: https://miktex.org/
+```
+
+---
+
+## File References in Document
+
+You can now reference figures in text:
+
+```latex
+As shown in Figure \ref{fig:system_architecture}, the system has three layers.
+
+See Figure \ref{fig:data_flow} for the complete data flow.
+
+Figure \ref{fig:methodology_pipeline} illustrates our methodology.
+```
+
+---
+
+## Documentation Files Created
+
+| File | Purpose |
+|------|---------|
+| `figures/README.md` | Complete figure setup guide |
+| `figures/NAMING_GUIDE.txt` | Naming conventions + examples |
+| `figures/GENERATE_FIGURES.md` | Python script templates |
+| `figures/SETUP_SUMMARY.txt` | This file (quick reference) |
+
+---
+
+## Quick Reference Card
+
+```
+CREATE THESE FIGURES:
+├─ system_architecture.png (Draw.io / PowerPoint)
+└─ data_flow_diagram.png (Draw.io / PowerPoint)
+
+SAVE TO:  c:\Users\mansi\FINDEC-RS\figures\
+
+COMPILE PDF:
+$ pdflatex FINDEC-RS_Proposal.tex
+$ pdflatex FINDEC-RS_Proposal.tex
+
+RESULT: FINDEC-RS_Proposal.pdf with embedded figures
+```
+
+---
+
+**Status:** ✅ LaTeX document updated with figure references
+**Next Step:** Create the 2 PNG files and compile PDF
+**Estimated Time:** 30-45 minutes (using Draw.io)
+
+Good luck! 🚀
