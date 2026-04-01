@@ -1,0 +1,328 @@
+.page {
+  --bg: #f3ecdf;
+  --surface: rgba(255, 251, 244, 0.9);
+  --line: rgba(68, 50, 29, 0.12);
+  --ink: #1d1812;
+  --muted: #665a4d;
+  --accent: #b65b34;
+  --accent-deep: #8e4325;
+  --success: #3f7f60;
+  --warn: #c08a28;
+  --danger: #a64d3f;
+  --shadow: 0 24px 60px rgba(58, 39, 21, 0.12);
+  min-height: 100vh;
+  padding: 32px 20px 48px;
+  background:
+    radial-gradient(circle at top left, rgba(237, 189, 129, 0.24), transparent 24%),
+    linear-gradient(180deg, #faf4ea 0%, var(--bg) 52%, #ece2d5 100%);
+  color: var(--ink);
+}
+
+.shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.formCard,
+.resultsPanel,
+.topCard,
+.recommendationCard,
+.rejectedCard {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.formCard,
+.resultsPanel {
+  padding: 28px;
+  height: fit-content;
+}
+
+.headerRow,
+.recommendationHeader,
+.topScore {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.headerRow,
+.recommendationHeader,
+.topScore {
+  align-items: center;
+}
+
+.kicker {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.headerRow h1,
+.topCard h2,
+.recommendationHeader h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.headerRow h1 {
+  font-size: clamp(2.3rem, 5vw, 3.8rem);
+  line-height: 0.95;
+}
+
+.primaryButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 22px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: #fff9f2;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.formGrid label {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 252, 247, 0.86);
+  min-height: 110px;
+}
+
+.formGrid span,
+.miniStats span,
+.metaGrid span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.formGrid input,
+.formGrid select {
+  width: 100%;
+  border: 1px solid rgba(68, 50, 29, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fffdfa;
+  color: var(--ink);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.formGrid input[type='range'] {
+  padding: 0;
+  align-self: center;
+}
+
+.miniStats,
+.metaGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.miniStats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.miniStats article,
+.metaGrid article {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 251, 245, 0.92);
+  height: 100%;
+}
+
+.errorBanner {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(166, 77, 63, 0.16);
+  border-radius: 16px;
+  background: rgba(250, 235, 232, 0.92);
+  color: var(--danger);
+}
+
+.resultsPanel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.topCard,
+.rejectedCard,
+.recommendationCard {
+  padding: 22px;
+}
+
+.topMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.topMeta article {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 251, 245, 0.92);
+}
+
+.topScore strong {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+
+.scorePill,
+.scoreBadge {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.scorePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.scoreBadge {
+  display: grid;
+  place-items: center;
+  min-width: 68px;
+  padding: 12px 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.recommendationStack,
+.rejectedList {
+  display: grid;
+  gap: 14px;
+}
+
+.rejectedList article {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 251, 245, 0.92);
+}
+
+.metaGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.listBlock {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.listBlock h4 {
+  margin: 0 0 10px;
+}
+
+.listBlock ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listBlock li {
+  position: relative;
+  padding-left: 16px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.listBlock li + li {
+  margin-top: 8px;
+}
+
+.listBlock li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.highTone {
+  background: rgba(63, 127, 96, 0.12);
+  color: var(--success);
+}
+
+.mediumTone {
+  background: rgba(192, 138, 40, 0.12);
+  color: var(--warn);
+}
+
+.lowTone {
+  background: rgba(166, 77, 63, 0.12);
+  color: var(--danger);
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .formGrid,
+  .miniStats,
+  .metaGrid,
+  .topMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .headerRow,
+  .recommendationHeader,
+  .topScore {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 16px 12px 36px;
+  }
+
+  .formCard,
+  .resultsPanel,
+  .topCard,
+  .recommendationCard,
+  .rejectedCard {
+    padding: 20px;
+    border-radius: 22px;
+  }
+}
