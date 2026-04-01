@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import user_routes, recommendation_routes
+from app.services.asset_repository import init_db
 
 app = FastAPI(title="FINDEC-RS API", version="0.1.0")
 
@@ -16,6 +17,8 @@ app.add_middleware(
 # Include routers
 app.include_router(user_routes.router, prefix="/api/users", tags=["users"])
 app.include_router(recommendation_routes.router, prefix="/api/recommendations", tags=["recommendations"])
+
+init_db()
 
 @app.get("/")
 async def root():

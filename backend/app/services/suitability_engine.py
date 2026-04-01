@@ -1,0 +1,396 @@
+from __future__ import annotations
+
+from statistics import mean
+from typing import Any
+
+from app.services.asset_repository import get_assets
+
+
+class SuitabilityEngine:
+    """Rule-based suitability engine for recommendation scoring."""
+
+    def evaluate(self, payload: dict[str, Any]) -> dict[str, Any]:
+        normalized_profile = self._build_user_profile(payload)
+        goal_context = self._map_goal_and_horizon(payload)
+        risk_context = self._assess_risk(payload, normalized_profile, goal_context)
+        preference_profile = self._build_preference_profile(payload, normalized_profile, goal_context, risk_context)
+        asset_universe = get_assets()
+
+        recommendations = [
+            self._score_asset(asset, normalized_profile, goal_context, risk_context, preference_profile)
+            for asset in asset_universe
+        ]
+
+        accepted = [item for item in recommendations if item["suitability_label"] != "low_fit"]
+        rejected = [item for item in recommendations if item["suitability_label"] == "low_fit"]
+        accepted.sort(key=lambda item: item["suitability_score"], reverse=True)
+        rejected.sort(key=lambda item: item["suitability_score"], reverse=True)
+
+        return {
+            "normalized_user_profile": normalized_profile,
+            "goal_context": goal_context,
+            "risk_profile": risk_context,
+            "preference_profile": preference_profile,
+            "recommendations": accepted,
+            "rejected_alternatives": [
+                {
+                    "recommendation_id": item["recommendation_id"],
+                    "name": item["name"],
+                    "reason": item["explanation_summary"],
+                }
+                for item in rejected
+            ],
+            "engine_summary": self._build_engine_summary(accepted, rejected, risk_context),
+        }
+
+    def _build_user_profile(self, payload: dict[str, Any]) -> dict[str, Any]:
+        monthly_income = max(float(payload.get("monthly_income", 0)), 0.0)
+        monthly_expenses = max(float(payload.get("monthly_expenses", 0)), 0.0)
+        emergency_months = max(float(payload.get("emergency_fund_months", 0)), 0.0)
+        liabilities = max(float(payload.get("liabilities", 0)), 0.0)
+        holdings_value = max(float(payload.get("current_holdings_value", 0)), 0.0)
+
+        savings_capacity = max(monthly_income - monthly_expenses, 0.0)
+        savings_rate = savings_capacity / monthly_income if monthly_income else 0.0
+        debt_to_income = liabilities / (monthly_income * 12) if monthly_income else 1.0
+
+        profile_score = mean(
+            [
+                self._score_income_stability(payload.get("income_stability", "variable")),
+                min(savings_rate * 100, 100),
+                min(emergency_months / 6 * 100, 100),
+                max(0, 100 - debt_to_income * 100),
+                self._score_experience(payload.get("investment_experience", "beginner")),
+                self._score_literacy(payload.get("financial_literacy_level", "basic")),
+            ]
+        )
+
+        return {
+            "age": int(payload.get("age", 30)),
+            "income_level": payload.get("income_level", "medium"),
+            "income_stability": payload.get("income_stability", "variable"),
+            "monthly_savings_capacity": round(savings_capacity, 2),
+            "savings_rate": round(savings_rate, 2),
+            "investment_experience": payload.get("investment_experience", "beginner"),
+            "financial_literacy_level": payload.get("financial_literacy_level", "basic"),
+            "current_holdings": payload.get("current_holdings", []),
+            "current_holdings_value": holdings_value,
+            "liabilities": liabilities,
+            "debt_to_income_ratio": round(debt_to_income, 2),
+            "emergency_fund_months": emergency_months,
+            "profile_strength_score": round(profile_score, 2),
+        }
+
+    def _map_goal_and_horizon(self, payload: dict[str, Any]) -> dict[str, Any]:
+        time_horizon_years = float(payload.get("time_horizon_years", 3))
+        liquidity_needs = payload.get("liquidity_needs", "medium")
+
+        if time_horizon_years < 2:
+            horizon_bucket = "short"
+        elif time_horizon_years < 5:
+            horizon_bucket = "medium"
+        else:
+            horizon_bucket = "long"
+
+        liquidity_score_map = {"low": 25, "medium": 55, "high": 85}
+        return {
+            "goal_category": payload.get("financial_goal", "long_term_wealth_creation"),
+            "horizon_bucket": horizon_bucket,
+            "target_time_horizon_years": time_horizon_years,
+            "liquidity_sensitivity_score": liquidity_score_map.get(liquidity_needs, 55),
+            "return_expectations": payload.get("return_expectations", "balanced"),
+        }
+
+    def _assess_risk(
+        self,
+        payload: dict[str, Any],
+        profile: dict[str, Any],
+        goal_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        risk_capacity_score = mean(
+            [
+                self._score_income_stability(profile["income_stability"]),
+                min(profile["emergency_fund_months"] / 6 * 100, 100),
+                min(profile["current_holdings_value"] / 100000 * 100, 100),
+                max(0, 100 - profile["debt_to_income_ratio"] * 100),
+                100 - goal_context["liquidity_sensitivity_score"],
+            ]
+        )
+
+        risk_tolerance_score = mean(
+            [
+                self._map_scale(payload.get("volatility_comfort", 3)),
+                self._map_scale(payload.get("drawdown_tolerance", 3)),
+                self._score_return_preference(payload.get("return_preference", "balanced")),
+            ]
+        )
+
+        combined = round(risk_capacity_score * 0.55 + risk_tolerance_score * 0.45, 2)
+        if combined < 40:
+            risk_band = "conservative"
+        elif combined < 70:
+            risk_band = "moderate"
+        else:
+            risk_band = "aggressive"
+
+        return {
+            "risk_capacity_score": round(risk_capacity_score, 2),
+            "risk_tolerance_score": round(risk_tolerance_score, 2),
+            "final_risk_band": risk_band,
+        }
+
+    def _score_asset(
+        self,
+        asset: dict[str, Any],
+        profile: dict[str, Any],
+        goal_context: dict[str, Any],
+        risk_context: dict[str, Any],
+        preference_profile: dict[str, Any],
+    ) -> dict[str, Any]:
+        rationale_factors = []
+        risk_warnings = []
+
+        goal_match = 100 if goal_context["goal_category"] in asset["goal_tags"] else 45
+        if goal_match == 100:
+            rationale_factors.append("Matches the stated investment goal.")
+        else:
+            risk_warnings.append("Goal alignment is limited for this recommendation.")
+
+        horizon_match = 100 if goal_context["horizon_bucket"] == asset["horizon"] else 55
+        if horizon_match == 100:
+            rationale_factors.append("Fits the target investment horizon.")
+        else:
+            risk_warnings.append("Time horizon fit is only partial.")
+
+        liquidity_match = self._score_liquidity_match(
+            goal_context["liquidity_sensitivity_score"], asset["liquidity"]
+        )
+        if liquidity_match >= 70:
+            rationale_factors.append("Liquidity needs stay within a manageable range.")
+        else:
+            risk_warnings.append("Liquidity needs may clash with the asset profile.")
+
+        risk_alignment = self._score_risk_alignment(asset["risk_score"], risk_context["final_risk_band"])
+        if risk_alignment >= 75:
+            rationale_factors.append("Risk level stays within the investor's risk band.")
+        else:
+            risk_warnings.append("Risk level stretches the investor's current capacity.")
+
+        concentration_penalty = self._sector_penalty(asset, profile["current_holdings"])
+        if concentration_penalty > 0:
+            risk_warnings.append("Adds concentration to an already represented sector.")
+        else:
+            rationale_factors.append("Does not materially worsen sector concentration.")
+
+        content_match_score = self._score_content_match(asset, preference_profile)
+        if content_match_score >= 75:
+            rationale_factors.append("Asset features are closely aligned with the investor preference profile.")
+        elif content_match_score < 50:
+            risk_warnings.append("Asset characteristics are only weakly aligned with learned user preferences.")
+
+        suitability_score = round(
+            goal_match * 0.23
+            + horizon_match * 0.14
+            + liquidity_match * 0.12
+            + risk_alignment * 0.24
+            + content_match_score * 0.19
+            + (100 - concentration_penalty) * 0.08,
+            2,
+        )
+
+        if suitability_score >= 75:
+            label = "high_fit"
+        elif suitability_score >= 55:
+            label = "medium_fit"
+        else:
+            label = "low_fit"
+
+        explanation_summary = self._build_explanation(asset, goal_context, risk_context, label, risk_warnings)
+        confidence_score = round(
+            min(
+                0.98,
+                (
+                    profile["profile_strength_score"] / 100 * 0.45
+                    + suitability_score / 100 * 0.45
+                    + (1 - min(len(risk_warnings), 3) * 0.1)
+                ) * 0.55,
+            ),
+            2,
+        )
+
+        next_best_action = (
+            "Proceed with a gradual allocation and monitor portfolio balance."
+            if label == "high_fit"
+            else "Review goal, liquidity, and risk constraints before allocating more capital."
+        )
+
+        if not risk_warnings:
+            risk_warnings.append("No immediate suitability warning identified by the current rule set.")
+
+        return {
+            "recommendation_id": asset["id"],
+            "name": asset["name"],
+            "asset_type": asset["type"],
+            "suitability_score": suitability_score,
+            "suitability_label": label,
+            "explanation_summary": explanation_summary,
+            "risk_warnings": risk_warnings,
+            "confidence_score": confidence_score,
+            "content_match_score": round(content_match_score, 2),
+            "rationale_factors": rationale_factors,
+            "next_best_action": next_best_action,
+        }
+
+    def _build_preference_profile(
+        self,
+        payload: dict[str, Any],
+        profile: dict[str, Any],
+        goal_context: dict[str, Any],
+        risk_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        experience = profile["investment_experience"]
+        if experience == "beginner":
+            complexity_preference = "simple"
+        elif experience == "advanced":
+            complexity_preference = "advanced"
+        else:
+            complexity_preference = "moderate"
+
+        diversification_preference = (
+            "high"
+            if profile["financial_literacy_level"] == "basic" or risk_context["final_risk_band"] == "conservative"
+            else "medium"
+        )
+
+        return {
+            "preferred_goal": goal_context["goal_category"],
+            "preferred_horizon": goal_context["horizon_bucket"],
+            "preferred_liquidity": goal_context["liquidity_sensitivity_score"],
+            "preferred_return_style": payload.get("return_preference", "balanced"),
+            "preferred_asset_type": self._preferred_asset_type(goal_context["goal_category"], risk_context["final_risk_band"]),
+            "complexity_preference": complexity_preference,
+            "diversification_preference": diversification_preference,
+        }
+
+    def _build_engine_summary(
+        self,
+        accepted: list[dict[str, Any]],
+        rejected: list[dict[str, Any]],
+        risk_context: dict[str, Any],
+    ) -> str:
+        top_pick = accepted[0]["name"] if accepted else "No recommendation"
+        return (
+            f"Engine finished with a {risk_context['final_risk_band']} risk band. "
+            f"Top current fit: {top_pick}. Rejected alternatives: {len(rejected)}."
+        )
+
+    def _build_explanation(
+        self,
+        asset: dict[str, Any],
+        goal_context: dict[str, Any],
+        risk_context: dict[str, Any],
+        label: str,
+        risk_warnings: list[str],
+    ) -> str:
+        if label == "high_fit":
+            return (
+                f"{asset['name']} is suitable because it matches the {goal_context['goal_category']} goal, "
+                f"fits a {risk_context['final_risk_band']} risk profile, and stays aligned with the planned horizon."
+            )
+        return (
+            f"{asset['name']} is less suitable because it creates one or more mismatches across goal, "
+            f"risk, or liquidity constraints. Main concern: {risk_warnings[0]}"
+        )
+
+    def _score_income_stability(self, income_stability: str) -> float:
+        return {"low": 30, "variable": 50, "medium": 65, "high": 85, "stable": 85}.get(
+            income_stability, 50
+        )
+
+    def _score_experience(self, experience: str) -> float:
+        return {"beginner": 35, "intermediate": 65, "advanced": 85}.get(experience, 35)
+
+    def _score_literacy(self, literacy: str) -> float:
+        return {"basic": 35, "moderate": 65, "advanced": 85}.get(literacy, 35)
+
+    def _map_scale(self, value: Any) -> float:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            numeric = 3.0
+        bounded = min(max(numeric, 1.0), 5.0)
+        return (bounded - 1) / 4 * 100
+
+    def _score_return_preference(self, preference: str) -> float:
+        return {"steady": 30, "balanced": 60, "high_upside": 85}.get(preference, 60)
+
+    def _score_content_match(self, asset: dict[str, Any], preference_profile: dict[str, Any]) -> float:
+        goal_similarity = 100 if preference_profile["preferred_goal"] in asset["goal_tags"] else 35
+        horizon_similarity = 100 if preference_profile["preferred_horizon"] == asset["horizon"] else 50
+        return_style_similarity = self._return_style_similarity(
+            preference_profile["preferred_return_style"], asset["return_style"]
+        )
+        asset_type_similarity = self._asset_type_similarity(
+            preference_profile["preferred_asset_type"], asset["type"]
+        )
+        diversification_similarity = self._diversification_similarity(
+            preference_profile["diversification_preference"], asset["sector"]
+        )
+
+        return round(
+            goal_similarity * 0.30
+            + horizon_similarity * 0.20
+            + return_style_similarity * 0.20
+            + asset_type_similarity * 0.20
+            + diversification_similarity * 0.10,
+            2,
+        )
+
+    def _preferred_asset_type(self, goal_category: str, risk_band: str) -> str:
+        if goal_category in {"short_term_savings", "emergency_buffer"}:
+            return "debt_fund"
+        if goal_category == "passive_investing":
+            return "etf"
+        if goal_category == "active_stock_selection":
+            return "equity" if risk_band == "aggressive" else "equity_basket"
+        if goal_category == "learning_based_exploratory_investing":
+            return "equity_basket"
+        return "mutual_fund" if risk_band == "conservative" else "etf"
+
+    def _return_style_similarity(self, preferred: str, asset_style: str) -> float:
+        if preferred == "steady":
+            return {"steady": 100, "market_tracking": 65, "blended": 60, "high_upside": 30}.get(asset_style, 50)
+        if preferred == "high_upside":
+            return {"high_upside": 100, "blended": 75, "market_tracking": 60, "steady": 35}.get(asset_style, 55)
+        return {"blended": 90, "market_tracking": 85, "steady": 70, "high_upside": 70}.get(asset_style, 65)
+
+    def _asset_type_similarity(self, preferred: str, asset_type: str) -> float:
+        if preferred == asset_type:
+            return 100
+        related = {
+            "mutual_fund": {"etf": 75, "debt_fund": 65},
+            "etf": {"mutual_fund": 75, "equity_basket": 60},
+            "equity": {"equity_basket": 80, "etf": 55},
+            "equity_basket": {"equity": 80, "etf": 60},
+            "debt_fund": {"mutual_fund": 65},
+        }
+        return related.get(preferred, {}).get(asset_type, 40)
+
+    def _diversification_similarity(self, preference: str, sector: str) -> float:
+        if preference == "high":
+            return 100 if sector == "diversified" else 45
+        return 85 if sector == "diversified" else 70
+
+    def _score_liquidity_match(self, liquidity_sensitivity: int, asset_liquidity: str) -> float:
+        asset_scores = {"low": 25, "medium": 60, "high": 90}
+        return max(0, 100 - abs(liquidity_sensitivity - asset_scores.get(asset_liquidity, 60)))
+
+    def _score_risk_alignment(self, asset_risk_score: int, risk_band: str) -> float:
+        band_target = {"conservative": 25, "moderate": 55, "aggressive": 80}
+        return max(0, 100 - abs(asset_risk_score - band_target.get(risk_band, 55)) * 1.4)
+
+    def _sector_penalty(self, asset: dict[str, Any], holdings: list[dict[str, Any]]) -> int:
+        if asset["sector"] == "diversified":
+            return 0
+        sector_matches = sum(1 for holding in holdings if holding.get("sector") == asset["sector"])
+        return min(sector_matches * 25, 75)
