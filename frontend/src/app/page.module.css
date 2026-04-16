@@ -1,7 +1,8 @@
 .page {
-  --bg: #f3ecdf;
-  --surface: rgba(255, 251, 244, 0.9);
-  --line: rgba(68, 50, 29, 0.12);
+  --bg: #f4efe6;
+  --surface: rgba(255, 253, 248, 0.94);
+  --field: rgba(255, 253, 248, 0.92);
+  --line: rgba(68, 50, 29, 0.14);
   --ink: #1d1812;
   --muted: #665a4d;
   --accent: #b65b34;
@@ -9,11 +10,15 @@
   --success: #3f7f60;
   --warn: #c08a28;
   --danger: #a64d3f;
+  --chart-grid: rgba(68, 50, 29, 0.24);
+  --chart-text: #4b3f33;
+  --chart-stroke: #b65b34;
+  --chart-fill: #d97846;
   --shadow: 0 24px 60px rgba(58, 39, 21, 0.12);
+  color-scheme: light;
   min-height: 100vh;
   padding: 32px 20px 48px;
   background:
-    radial-gradient(circle at top left, rgba(237, 189, 129, 0.24), transparent 24%),
     linear-gradient(180deg, #faf4ea 0%, var(--bg) 52%, #ece2d5 100%);
   color: var(--ink);
 }
@@ -29,12 +34,13 @@
 
 .formCard,
 .resultsPanel,
-.topCard,
+.radarCard,
 .recommendationCard,
-.rejectedCard {
+.rejectedCard,
+.summaryCard {
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 28px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
 }
@@ -47,7 +53,7 @@
 
 .headerRow,
 .recommendationHeader,
-.topScore {
+.cardTitleRow {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -56,7 +62,7 @@
 
 .headerRow,
 .recommendationHeader,
-.topScore {
+.cardTitleRow {
   align-items: center;
 }
 
@@ -70,15 +76,15 @@
 }
 
 .headerRow h1,
-.topCard h2,
+.radarCard h2,
 .recommendationHeader h3 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: inherit;
 }
 
 .headerRow h1 {
-  font-size: clamp(2.3rem, 5vw, 3.8rem);
-  line-height: 0.95;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
 }
 
 .primaryButton {
@@ -110,14 +116,15 @@
   align-content: start;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 18px;
-  background: rgba(255, 252, 247, 0.86);
+  border-radius: 8px;
+  background: var(--field);
   min-height: 110px;
 }
 
 .formGrid span,
 .miniStats span,
-.metaGrid span {
+.metaGrid span,
+.topMeta span {
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -126,9 +133,9 @@
 .formGrid select {
   width: 100%;
   border: 1px solid rgba(68, 50, 29, 0.12);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 12px 14px;
-  background: #fffdfa;
+  background: var(--field);
   color: var(--ink);
   font: inherit;
   box-sizing: border-box;
@@ -153,9 +160,9 @@
 .miniStats article,
 .metaGrid article {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
   padding: 14px;
-  background: rgba(255, 251, 245, 0.92);
+  background: var(--field);
   height: 100%;
 }
 
@@ -163,7 +170,7 @@
   margin: 16px 0 0;
   padding: 14px 16px;
   border: 1px solid rgba(166, 77, 63, 0.16);
-  border-radius: 16px;
+  border-radius: 8px;
   background: rgba(250, 235, 232, 0.92);
   color: var(--danger);
 }
@@ -174,34 +181,31 @@
   align-content: start;
 }
 
-.topCard,
+.radarCard,
 .rejectedCard,
-.recommendationCard {
+.recommendationCard,
+.summaryCard {
   padding: 22px;
 }
 
 .topMeta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
 
 .topMeta article {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
   padding: 14px;
-  background: rgba(255, 251, 245, 0.92);
-}
-
-.topScore strong {
-  font-size: 3.4rem;
-  line-height: 1;
+  background: var(--field);
+  min-width: 0;
 }
 
 .scorePill,
 .scoreBadge {
-  border-radius: 999px;
+  border-radius: 8px;
   font-weight: 700;
 }
 
@@ -220,17 +224,35 @@
   flex-shrink: 0;
 }
 
+.chartFrame {
+  width: 100%;
+  height: 320px;
+  margin-top: 10px;
+}
+
 .recommendationStack,
 .rejectedList {
   display: grid;
   gap: 14px;
 }
 
+.summaryCard p {
+  color: var(--ink);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.notFoundText {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0 0 20px;
+}
+
 .rejectedList article {
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 251, 245, 0.92);
+  border-radius: 8px;
+  background: var(--field);
 }
 
 .metaGrid {
@@ -291,6 +313,50 @@
   color: var(--danger);
 }
 
+@media (prefers-color-scheme: dark) {
+  .page {
+    --bg: #111827;
+    --surface: rgba(24, 32, 45, 0.96);
+    --field: rgba(31, 42, 58, 0.92);
+    --line: rgba(226, 232, 240, 0.16);
+    --ink: #f8fafc;
+    --muted: #cbd5e1;
+    --accent: #f3a36f;
+    --accent-deep: #ffbd88;
+    --success: #8ee0b2;
+    --warn: #f3cf72;
+    --danger: #f2a49a;
+    --chart-grid: rgba(226, 232, 240, 0.24);
+    --chart-text: #f1f5f9;
+    --chart-stroke: #ffbd88;
+    --chart-fill: #f3a36f;
+    --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    color-scheme: dark;
+    background: linear-gradient(180deg, #0b1120 0%, var(--bg) 56%, #141a2a 100%);
+  }
+
+  .formGrid input,
+  .formGrid select {
+    border-color: var(--line);
+  }
+
+  .primaryButton {
+    color: #111827;
+  }
+
+  .highTone {
+    background: rgba(142, 224, 178, 0.16);
+  }
+
+  .mediumTone {
+    background: rgba(243, 207, 114, 0.16);
+  }
+
+  .lowTone {
+    background: rgba(242, 164, 154, 0.16);
+  }
+}
+
 @media (max-width: 1080px) {
   .shell {
     grid-template-columns: 1fr;
@@ -307,8 +373,9 @@
 
   .headerRow,
   .recommendationHeader,
-  .topScore {
+  .cardTitleRow {
     flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -319,10 +386,15 @@
 
   .formCard,
   .resultsPanel,
-  .topCard,
+  .radarCard,
   .recommendationCard,
-  .rejectedCard {
+  .rejectedCard,
+  .summaryCard {
     padding: 20px;
-    border-radius: 22px;
+    border-radius: 8px;
+  }
+
+  .chartFrame {
+    height: 260px;
   }
 }

@@ -1,6 +1,14 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+} from 'recharts'
 
 import styles from './page.module.css'
 import {
@@ -72,12 +80,31 @@ export default function Home() {
   const metrics = useMemo(() => {
     const savings = Math.max(form.monthly_income - form.monthly_expenses, 0)
     const savingsRate = form.monthly_income > 0 ? Math.round((savings / form.monthly_income) * 100) : 0
+    const liquidityScore = { low: 35, medium: 65, high: 90 }[form.liquidity_needs] ?? 50
+    const literacyScore = { basic: 35, moderate: 65, advanced: 88 }[form.financial_literacy_level] ?? 50
+    const horizonScore = Math.min(Math.round((form.time_horizon_years / 12) * 100), 100)
 
     return {
       savings,
       savingsRate,
+      radar: [
+        { metric: 'Risk', value: form.volatility_comfort * 20 },
+        { metric: 'Drawdown', value: form.drawdown_tolerance * 20 },
+        { metric: 'Horizon', value: horizonScore },
+        { metric: 'Liquidity', value: liquidityScore },
+        { metric: 'Savings', value: Math.min(savingsRate * 2, 100) },
+        { metric: 'Literacy', value: literacyScore },
+      ],
     }
-  }, [form.monthly_expenses, form.monthly_income])
+  }, [
+    form.drawdown_tolerance,
+    form.financial_literacy_level,
+    form.liquidity_needs,
+    form.monthly_expenses,
+    form.monthly_income,
+    form.time_horizon_years,
+    form.volatility_comfort,
+  ])
 
   const setField = <K extends keyof SuitabilityRequest>(key: K, value: SuitabilityRequest[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
@@ -104,8 +131,8 @@ export default function Home() {
         <form className={styles.formCard} onSubmit={handleSubmit}>
           <div className={styles.headerRow}>
             <div>
-              <p className={styles.kicker}>FINDEC-RS</p>
-              <h1>Suitability Engine</h1>
+              <p className={styles.kicker}>Investor Brief</p>
+              <h1>Financial Fit Dashboard</h1>
             </div>
             <button className={styles.primaryButton} type="submit" disabled={loading}>
               {loading ? 'Running...' : 'Run'}
@@ -264,19 +291,43 @@ export default function Home() {
         </form>
 
         <section className={styles.resultsPanel}>
-          <div className={styles.topCard}>
-            <span className={styles.kicker}>Top Match</span>
-            <h2>{topRecommendation?.name ?? 'No Result'}</h2>
-            <div className={styles.topScore}>
-              <strong>{Math.round(topRecommendation?.suitability_score ?? 0)}</strong>
+          <div className={styles.radarCard}>
+            <div className={styles.cardTitleRow}>
+              <div>
+                <span className={styles.kicker}>Radar</span>
+                <h2>Risk and Intent Profile</h2>
+              </div>
               <span className={`${styles.scorePill} ${getLabelTone(topRecommendation?.suitability_label ?? 'low_fit')}`}>
-                {formatLabel(topRecommendation?.suitability_label ?? 'low_fit')}
+                {topRecommendation ? formatLabel(topRecommendation.suitability_label) : 'Ready'}
               </span>
+            </div>
+            <div className={styles.chartFrame}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={metrics.radar} outerRadius="72%">
+                  <PolarGrid stroke="var(--chart-grid)" />
+                  <PolarAngleAxis
+                    dataKey="metric"
+                    tick={{ fill: 'var(--chart-text)', fontSize: 12, fontWeight: 700 }}
+                  />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar
+                    name="Profile"
+                    dataKey="value"
+                    stroke="var(--chart-stroke)"
+                    fill="var(--chart-fill)"
+                    fillOpacity={0.45}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
             </div>
             <div className={styles.topMeta}>
               <article>
-                <span>Content Match</span>
-                <strong>{Math.round(topRecommendation?.content_match_score ?? 0)}</strong>
+                <span>Top Match</span>
+                <strong>{topRecommendation?.name ?? 'Run brief'}</strong>
+              </article>
+              <article>
+                <span>Score</span>
+                <strong>{Math.round(topRecommendation?.suitability_score ?? 0)}</strong>
               </article>
               <article>
                 <span>Risk Band</span>
@@ -286,10 +337,21 @@ export default function Home() {
                     : '-'}
                 </strong>
               </article>
+              <article>
+                <span>Content Match</span>
+                <strong>{Math.round(topRecommendation?.content_match_score ?? 0)}</strong>
+              </article>
             </div>
           </div>
 
           <div className={styles.recommendationStack}>
+            {results?.engine_summary ? (
+              <article className={styles.summaryCard}>
+                <span className={styles.kicker}>Brief</span>
+                <p>{results.engine_summary}</p>
+              </article>
+            ) : null}
+
             {(results?.recommendations ?? []).map((recommendation) => (
               <article key={recommendation.recommendation_id} className={styles.recommendationCard}>
                 <div className={styles.recommendationHeader}>
