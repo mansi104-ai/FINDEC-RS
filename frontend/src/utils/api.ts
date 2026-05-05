@@ -49,6 +49,7 @@ export type SuitabilityRequest = {
   volatility_comfort: number
   drawdown_tolerance: number
   return_preference: string
+  portfolio_type?: string
 }
 
 export type ScoredRecommendation = {
@@ -71,6 +72,21 @@ export type RejectedAlternative = {
   reason: string
 }
 
+export type PortfolioAllocation = {
+  asset_type: string
+  percentage: number
+  rationale: string
+}
+
+export type PortfolioRecommendation = {
+  portfolio_type: string
+  expected_return: string
+  risk_level: string
+  allocations: PortfolioAllocation[]
+  description: string
+  suitable_for: string[]
+}
+
 export type SuitabilityResponse = {
   normalized_user_profile: Record<string, unknown>
   goal_context: Record<string, unknown>
@@ -78,6 +94,7 @@ export type SuitabilityResponse = {
   preference_profile: Record<string, unknown>
   recommendations: ScoredRecommendation[]
   rejected_alternatives: RejectedAlternative[]
+  portfolio_recommendations?: PortfolioRecommendation[]
   engine_summary: string
 }
 

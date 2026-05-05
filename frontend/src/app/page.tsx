@@ -344,6 +344,59 @@ export default function Home() {
             </div>
           </div>
 
+          {results?.portfolio_recommendations?.length ? (
+            <div className={styles.portfolioSection}>
+              <div className={styles.cardTitleRow}>
+                <div>
+                  <span className={styles.kicker}>Allocations</span>
+                  <h2>Recommended Portfolios</h2>
+                </div>
+              </div>
+              <div className={styles.portfolioGrid}>
+                {results.portfolio_recommendations.map((portfolio) => (
+                  <article key={portfolio.portfolio_type} className={styles.portfolioCard}>
+                    <div className={styles.portfolioHeader}>
+                      <h3>{formatLabel(portfolio.portfolio_type)}</h3>
+                      <span className={styles.riskBadge} data-risk={portfolio.risk_level}>
+                        {formatLabel(portfolio.risk_level)}
+                      </span>
+                    </div>
+                    <p className={styles.portfolioDescription}>{portfolio.description}</p>
+                    <div className={styles.returnExpectation}>
+                      <span>Expected Return</span>
+                      <strong>{portfolio.expected_return}</strong>
+                    </div>
+                    <div className={styles.allocationList}>
+                      {portfolio.allocations.map((allocation) => (
+                        <div key={allocation.asset_type} className={styles.allocationItem}>
+                          <div className={styles.allocationBar}>
+                            <div 
+                              className={styles.allocationFill}
+                              style={{ width: `${allocation.percentage}%` }}
+                            />
+                          </div>
+                          <div className={styles.allocationLabel}>
+                            <span className={styles.assetType}>{formatLabel(allocation.asset_type)}</span>
+                            <span className={styles.percentage}>{allocation.percentage}%</span>
+                          </div>
+                          <p className={styles.allocationRationale}>{allocation.rationale}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.suitableFor}>
+                      <span className={styles.label}>Suitable for:</span>
+                      <div className={styles.tagList}>
+                        {portfolio.suitable_for.map((tag) => (
+                          <span key={tag} className={styles.tag}>{formatLabel(tag)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className={styles.recommendationStack}>
             {results?.engine_summary ? (
               <article className={styles.summaryCard}>

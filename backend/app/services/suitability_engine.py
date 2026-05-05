@@ -26,6 +26,10 @@ class SuitabilityEngine:
         accepted.sort(key=lambda item: item["suitability_score"], reverse=True)
         rejected.sort(key=lambda item: item["suitability_score"], reverse=True)
 
+        portfolio_recommendations = self._generate_portfolio_recommendations(
+            normalized_profile, goal_context, risk_context, preference_profile
+        )
+
         return {
             "normalized_user_profile": normalized_profile,
             "goal_context": goal_context,
@@ -40,26 +44,43 @@ class SuitabilityEngine:
                 }
                 for item in rejected
             ],
+            "portfolio_recommendations": portfolio_recommendations,
             "engine_summary": self._build_engine_summary(accepted, rejected, risk_context),
         }
 
     def _build_user_profile(self, payload: dict[str, Any]) -> dict[str, Any]:
-        monthly_income = max(float(payload.get("monthly_income", 0)), 0.0)
-        monthly_expenses = max(float(payload.get("monthly_expenses", 0)), 0.0)
-        emergency_months = max(float(payload.get("emergency_fund_months", 0)), 0.0)
-        liabilities = max(float(payload.get("liabilities", 0)), 0.0)
-        holdings_value = max(float(payload.get("current_holdings_value", 0)), 0.0)
+        try:
+            monthly_income = max(float(payload.get("monthly_income", 0)), 0.0)
+            monthly_expenses = max(float(payload.get("monthly_expenses", 0)), 0.0)
+            emergency_months = max(float(payload.get("emergency_fund_months", 0)), 0.0)
+            liabilities = max(float(payload.get("liabilities", 0)), 0.0)
+            holdings_value = max(float(payload.get("current_holdings_value", 0)), 0.0)
+        except (ValueError, TypeError):
+            monthly_income = 0.0
+            monthly_expenses = 0.0
+            emergency_months = 0.0
+            liabilities = 0.0
+            holdings_value = 0.0
 
+        # Ensure emergency_months is reasonable (0-120 months = 10 years max)
+        emergency_months = min(emergency_months, 120.0)
+        
         savings_capacity = max(monthly_income - monthly_expenses, 0.0)
-        savings_rate = savings_capacity / monthly_income if monthly_income else 0.0
-        debt_to_income = liabilities / (monthly_income * 12) if monthly_income else 1.0
+        savings_rate = (savings_capacity / monthly_income) if monthly_income > 0 else 0.0
+        savings_rate = min(savings_rate, 1.0)  # Cap at 100%
+        
+        # Debt to income ratio - cap at reasonable maximum to prevent extreme values
+        if monthly_income > 0:
+            debt_to_income = min(liabilities / (monthly_income * 12), 10.0)
+        else:
+            debt_to_income = 1.0
 
         profile_score = mean(
             [
                 self._score_income_stability(payload.get("income_stability", "variable")),
                 min(savings_rate * 100, 100),
-                min(emergency_months / 6 * 100, 100),
-                max(0, 100 - debt_to_income * 100),
+                min((emergency_months / 6) * 100, 100),
+                max(0, min(100 - (debt_to_income * 100), 100)),  # Bound to 0-100
                 self._score_experience(payload.get("investment_experience", "beginner")),
                 self._score_literacy(payload.get("financial_literacy_level", "basic")),
             ]
@@ -70,15 +91,15 @@ class SuitabilityEngine:
             "income_level": payload.get("income_level", "medium"),
             "income_stability": payload.get("income_stability", "variable"),
             "monthly_savings_capacity": round(savings_capacity, 2),
-            "savings_rate": round(savings_rate, 2),
+            "savings_rate": round(min(savings_rate, 1.0), 2),
             "investment_experience": payload.get("investment_experience", "beginner"),
             "financial_literacy_level": payload.get("financial_literacy_level", "basic"),
-            "current_holdings": payload.get("current_holdings", []),
+            "current_holdings": payload.get("current_holdings", []) or [],
             "current_holdings_value": holdings_value,
             "liabilities": liabilities,
-            "debt_to_income_ratio": round(debt_to_income, 2),
-            "emergency_fund_months": emergency_months,
-            "profile_strength_score": round(profile_score, 2),
+            "debt_to_income_ratio": round(min(debt_to_income, 10.0), 2),
+            "emergency_fund_months": round(emergency_months, 1),
+            "profile_strength_score": round(min(profile_score, 100.0), 2),
         }
 
     def _map_goal_and_horizon(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -107,15 +128,23 @@ class SuitabilityEngine:
         profile: dict[str, Any],
         goal_context: dict[str, Any],
     ) -> dict[str, Any]:
+        # Calculate risk capacity score with safe division
+        emergency_fund_score = min((profile["emergency_fund_months"] / 6) * 100, 100) if profile["emergency_fund_months"] > 0 else 0
+        holdings_score = min((profile["current_holdings_value"] / 100000) * 100, 100) if profile["current_holdings_value"] > 0 else 0
+        debt_score = max(0, min(100 - (profile["debt_to_income_ratio"] * 100), 100))
+        
         risk_capacity_score = mean(
             [
                 self._score_income_stability(profile["income_stability"]),
-                min(profile["emergency_fund_months"] / 6 * 100, 100),
-                min(profile["current_holdings_value"] / 100000 * 100, 100),
-                max(0, 100 - profile["debt_to_income_ratio"] * 100),
+                emergency_fund_score,
+                holdings_score,
+                debt_score,
                 100 - goal_context["liquidity_sensitivity_score"],
             ]
         )
+        
+        # Bound risk capacity score to 0-100
+        risk_capacity_score = max(0, min(risk_capacity_score, 100))
 
         risk_tolerance_score = mean(
             [
@@ -124,8 +153,13 @@ class SuitabilityEngine:
                 self._score_return_preference(payload.get("return_preference", "balanced")),
             ]
         )
+        
+        # Bound risk tolerance score to 0-100
+        risk_tolerance_score = max(0, min(risk_tolerance_score, 100))
 
         combined = round(risk_capacity_score * 0.55 + risk_tolerance_score * 0.45, 2)
+        combined = max(0, min(combined, 100))  # Ensure 0-100 range
+        
         if combined < 40:
             risk_band = "conservative"
         elif combined < 70:
@@ -134,10 +168,114 @@ class SuitabilityEngine:
             risk_band = "aggressive"
 
         return {
-            "risk_capacity_score": round(risk_capacity_score, 2),
-            "risk_tolerance_score": round(risk_tolerance_score, 2),
+            "risk_capacity_score": round(max(0, min(risk_capacity_score, 100)), 2),
+            "risk_tolerance_score": round(max(0, min(risk_tolerance_score, 100)), 2),
             "final_risk_band": risk_band,
         }
+
+    def _calculate_dynamic_weights(
+        self,
+        profile: dict[str, Any],
+        goal_context: dict[str, Any],
+        risk_context: dict[str, Any],
+    ) -> dict[str, float]:
+        """Calculate dynamic weights based on user profile characteristics.
+        
+        Different factors carry different importance for different people:
+        - Young users with stable income: Higher weight on risk_alignment and content_match
+        - Older users: Higher weight on goal_match and stability factors
+        - High-experience users: Higher weight on content_match
+        - High-debt users: Higher weight on goal_match and liquidity_match
+        - Conservative profiles: Higher weight on goal_match and liquidity_match
+        """
+        age = profile["age"]
+        experience = profile["investment_experience"]
+        debt_to_income = profile["debt_to_income_ratio"]
+        savings_rate = profile["savings_rate"]
+        emergency_funds = profile["emergency_fund_months"]
+        risk_band = risk_context["final_risk_band"]
+        
+        # Start with baseline weights
+        weights = {
+            "goal_match": 0.23,
+            "horizon_match": 0.14,
+            "liquidity_match": 0.12,
+            "risk_alignment": 0.24,
+            "content_match": 0.19,
+            "concentration": 0.08,
+        }
+        
+        # Adjustment for age
+        if age < 35:
+            # Young users: can afford more risk, emphasize growth potential
+            weights["risk_alignment"] += 0.08
+            weights["content_match"] += 0.05
+            weights["goal_match"] -= 0.05
+            weights["liquidity_match"] -= 0.08
+        elif age > 55:
+            # Near/at retirement: preserve capital, emphasize stability
+            weights["goal_match"] += 0.08
+            weights["liquidity_match"] += 0.05
+            weights["risk_alignment"] -= 0.05
+            weights["content_match"] -= 0.08
+        
+        # Adjustment for experience level
+        if experience == "advanced":
+            weights["content_match"] += 0.06
+            weights["goal_match"] -= 0.03
+            weights["horizon_match"] -= 0.03
+        elif experience == "beginner":
+            weights["goal_match"] += 0.05
+            weights["liquidity_match"] += 0.04
+            weights["content_match"] -= 0.06
+            weights["concentration"] -= 0.03
+        
+        # Adjustment for debt burden
+        if debt_to_income > 0.5:
+            # High debt: need to be more careful with risk
+            weights["goal_match"] += 0.06
+            weights["liquidity_match"] += 0.04
+            weights["risk_alignment"] -= 0.05
+            weights["content_match"] -= 0.05
+        
+        # Adjustment for savings capacity
+        if savings_rate > 0.4:
+            # High savings: can take on more investment risk
+            weights["risk_alignment"] += 0.04
+            weights["content_match"] += 0.03
+            weights["liquidity_match"] -= 0.07
+        elif savings_rate < 0.1:
+            # Low savings: need liquid, safe investments
+            weights["liquidity_match"] += 0.08
+            weights["goal_match"] += 0.03
+            weights["risk_alignment"] -= 0.06
+            weights["content_match"] -= 0.05
+        
+        # Adjustment for emergency fund status
+        if emergency_funds < 2:
+            weights["liquidity_match"] += 0.08
+            weights["risk_alignment"] -= 0.06
+        elif emergency_funds > 6:
+            weights["risk_alignment"] += 0.05
+            weights["liquidity_match"] -= 0.04
+        
+        # Adjustment for conservative risk band
+        if risk_band == "conservative":
+            weights["goal_match"] += 0.05
+            weights["liquidity_match"] += 0.03
+            weights["risk_alignment"] -= 0.04
+            weights["content_match"] -= 0.04
+        elif risk_band == "aggressive":
+            weights["risk_alignment"] += 0.05
+            weights["content_match"] += 0.04
+            weights["goal_match"] -= 0.04
+            weights["liquidity_match"] -= 0.05
+        
+        # Normalize weights to sum to 1.0
+        total = sum(weights.values())
+        normalized = {k: v / total for k, v in weights.items()}
+        
+        return normalized
 
     def _score_asset(
         self,
@@ -188,13 +326,16 @@ class SuitabilityEngine:
         elif content_match_score < 50:
             risk_warnings.append("Asset characteristics are only weakly aligned with learned user preferences.")
 
+        # Get dynamic weights based on user profile
+        weights = self._calculate_dynamic_weights(profile, goal_context, risk_context)
+        
         suitability_score = round(
-            goal_match * 0.23
-            + horizon_match * 0.14
-            + liquidity_match * 0.12
-            + risk_alignment * 0.24
-            + content_match_score * 0.19
-            + (100 - concentration_penalty) * 0.08,
+            goal_match * weights["goal_match"]
+            + horizon_match * weights["horizon_match"]
+            + liquidity_match * weights["liquidity_match"]
+            + risk_alignment * weights["risk_alignment"]
+            + content_match_score * weights["content_match"]
+            + (100 - concentration_penalty) * weights["concentration"],
             2,
         )
 
@@ -394,3 +535,124 @@ class SuitabilityEngine:
             return 0
         sector_matches = sum(1 for holding in holdings if holding.get("sector") == asset["sector"])
         return min(sector_matches * 25, 75)
+
+    def _generate_portfolio_recommendations(
+        self,
+        profile: dict[str, Any],
+        goal_context: dict[str, Any],
+        risk_context: dict[str, Any],
+        preference_profile: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Generate dynamic portfolio recommendations based on user profile."""
+        risk_band = risk_context["final_risk_band"]
+        age = profile["age"]
+        time_horizon = goal_context["target_time_horizon_years"]
+        savings_rate = profile["savings_rate"]
+        
+        recommendations = []
+        
+        # Generate age-appropriate portfolio
+        if age < 40 and time_horizon > 5:
+            recommendations.append(self._create_portfolio(
+                "growth_oriented",
+                "8-12% annually",
+                "high",
+                [
+                    ("equity", 70, "High growth potential for long-term wealth building"),
+                    ("debt_fund", 20, "Stable income and portfolio balancing"),
+                    ("alternatives", 10, "Diversification and inflation protection"),
+                ],
+                "Ideal for young investors with long time horizons who can tolerate volatility"
+            ))
+        
+        # Generate balanced portfolio
+        recommendations.append(self._create_portfolio(
+            "balanced",
+            "6-8% annually",
+            "moderate",
+            [
+                ("equity", 50, "Capital growth component"),
+                ("debt_fund", 35, "Income and stability"),
+                ("alternatives", 15, "Diversification and inflation hedge"),
+            ],
+            "Suitable for most investors seeking a balance between growth and stability"
+        ))
+        
+        # Generate conservative portfolio
+        if risk_band in ("conservative", "moderate") or age > 50:
+            recommendations.append(self._create_portfolio(
+                "capital_preservation",
+                "4-5% annually",
+                "low",
+                [
+                    ("debt_fund", 60, "Principal preservation focus"),
+                    ("equity", 25, "Limited growth exposure"),
+                    ("alternatives", 15, "Inflation protection"),
+                ],
+                "Focuses on preserving capital with modest growth potential"
+            ))
+        
+        # Generate income-focused portfolio if high liquidity needs
+        if goal_context["liquidity_sensitivity_score"] > 70:
+            recommendations.append(self._create_portfolio(
+                "income_focused",
+                "4-6% annually",
+                "low-moderate",
+                [
+                    ("debt_fund", 50, "Regular dividend/interest income"),
+                    ("equity", 30, "Dividend-paying stocks and funds"),
+                    ("alternatives", 20, "Real assets and yield generation"),
+                ],
+                "Emphasizes current income generation and liquidity"
+            ))
+        
+        # Generate aggressive portfolio if high savings rate and young age
+        if savings_rate > 0.3 and age < 45 and time_horizon > 7:
+            recommendations.append(self._create_portfolio(
+                "aggressive_growth",
+                "12-15% annually",
+                "very high",
+                [
+                    ("equity", 85, "Maximum growth exposure"),
+                    ("alternatives", 15, "Emerging markets and high-growth sectors"),
+                ],
+                "Maximum growth focus for investors comfortable with significant volatility"
+            ))
+        
+        return recommendations
+
+    def _create_portfolio(
+        self,
+        portfolio_type: str,
+        expected_return: str,
+        risk_level: str,
+        allocations: list[tuple[str, float, str]],
+        description: str,
+    ) -> dict[str, Any]:
+        """Helper method to create portfolio recommendation objects."""
+        return {
+            "portfolio_type": portfolio_type,
+            "expected_return": expected_return,
+            "risk_level": risk_level,
+            "allocations": [
+                {
+                    "asset_type": asset_type,
+                    "percentage": percentage,
+                    "rationale": rationale,
+                }
+                for asset_type, percentage, rationale in allocations
+            ],
+            "description": description,
+            "suitable_for": self._determine_suitable_profiles(portfolio_type),
+        }
+
+    def _determine_suitable_profiles(self, portfolio_type: str) -> list[str]:
+        """Determine which investor profiles are suitable for each portfolio type."""
+        profiles = {
+            "growth_oriented": ["young_investor", "long_horizon", "risk_tolerant", "growth_focused"],
+            "balanced": ["moderate_investor", "diversification_seeking", "moderate_risk"],
+            "capital_preservation": ["conservative", "near_retirement", "risk_averse", "stability_focused"],
+            "income_focused": ["income_seeking", "high_liquidity_needs", "retiree"],
+            "aggressive_growth": ["high_risk_tolerance", "young", "high_savings_rate", "maximum_growth"],
+        }
+        return profiles.get(portfolio_type, ["general_investor"])
